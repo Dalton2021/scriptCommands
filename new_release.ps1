@@ -167,8 +167,8 @@ foreach ($app in $apps) {
 # Define the base path where the folders are located
 $baseReleasePath = "C:\Users\clutch\Documents\Clutch\Apps\Releases"
 
-# If no apps are specified, exit with a message
 
+# Creates a zip file for each app inside the apps/APP_NAME/Releases folder using the contents of the baseReleasePath Production folder
 foreach ($app in $apps) {
     # Map short name to full name
     if ($appMappings.Values -contains $app) {
@@ -176,19 +176,49 @@ foreach ($app in $apps) {
 
         $zipIndex++
 
+        # Define the paths for the app and client app
+        $appReleasesPath = Join-Path -Path $baseAppPath -ChildPath "$app\Releases"
+        $clientAppPath = Join-Path -Path $baseAppPath -ChildPath "$app\$app\ClientApp"
+
         # Define the path to the Production folder
         $productionPath = Join-Path -Path $baseReleasePath -ChildPath "$app\Production"
 
         # Check if the Production directory exists
         if (Test-Path $productionPath) {
-            # Define the destination zip file within the Production folder
-            $zipFilePath = Join-Path -Path $productionPath -ChildPath "$app.zip"
+            # Check if the Releases directory exists; if not, create it
+            if (-not (Test-Path $appReleasesPath)) {
+                Write-Host "Releases directory for $app not found at $appReleasesPath. Creating directory..." -ForegroundColor Yellow
+                New-Item -Path $appReleasesPath -ItemType Directory | Out-Null
+            }
+
+            # Read the version from package.json
+            $packageJsonPath = Join-Path -Path $clientAppPath -ChildPath "package.json"
+            if (Test-Path $packageJsonPath) {
+                $packageJson = Get-Content $packageJsonPath | Out-String | ConvertFrom-Json
+                $version = $packageJson.version
+                $zipFileName = "$app" + "_$version.zip"
+            } else {
+                Write-Host "package.json not found in $clientAppPath. Skipping $app." -ForegroundColor Yellow
+                continue
+            }
+
+            # Define the destination zip file within the app's root releases folder
+            $zipFilePath = Join-Path -Path $appReleasesPath -ChildPath $zipFileName
 
             # Compress the contents of the Production folder into a zip file
-            Write-Host " - zipping contents into $app.zip..." -ForegroundColor DarkGray
+            Write-Host " - zipping contents into $zipFileName..." -ForegroundColor DarkGray
             Compress-Archive -Path (Join-Path $productionPath '*') -DestinationPath $zipFilePath -Force
 
-            Write-Host "$app has been zipped successfully." -ForegroundColor DarkGreen
+            Write-Host "$app has been zipped successfully as $zipFileName." -ForegroundColor DarkGreen
+
+            # Delete the oldest zip file if there are more than 2 zip files in the Releases folder
+            $zipFiles = Get-ChildItem -Path $appReleasesPath -Filter "*.zip" | Sort-Object LastWriteTime
+            if ($zipFiles.Count -gt 2) {
+                $oldestZipFile = $zipFiles[0]
+                Write-Host " - Deleting oldest zip file: $($oldestZipFile.Name)..." -ForegroundColor DarkGray
+                Remove-Item -Path $oldestZipFile.FullName -Force
+                Write-Host "Oldest zip file $($oldestZipFile.Name) has been deleted." -ForegroundColor DarkGreen
+            }
         } else {
             Write-Host "Production directory for $app not found at $productionPath. Skipping." -ForegroundColor Yellow
         }
@@ -196,6 +226,8 @@ foreach ($app in $apps) {
         Write-Host "App short name '$app' not recognized. Skipping." -ForegroundColor Red
     }
 }
+
+
 
 
 # Calculate and log the total time taken for all apps
