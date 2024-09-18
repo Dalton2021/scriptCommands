@@ -43,25 +43,25 @@ if (-not $apps -or $apps.Count -eq 0) {
 Write-Host "Apps recieved: $apps" -ForegroundColor Cyan
 
 # Commands to run in each directory
-$npm_install = "npm i @clutch-inc/usfa-ui@latest"
+$npm_install = "npm i --quiet --no-progress --no-audit --no-fund @clutch-inc/usfa-ui@latest"
 
 # Iterate through each app and run commands
 foreach ($app in $apps) {
     # Construct the full path
     $client_path = Join-Path -Path $base_path -ChildPath "$app\$app\ClientApp"
 
-    Write-Host "Updating $client_path..."
+    Write-Host " - Updating $app..." -ForegroundColor DarkGray
 
     # Change to the directory
     Set-Location -Path $client_path
 
     # Run npm install and capture errors
     if (-not (Invoke-Expression $npm_install)) {
-        Write-Host "Error: npm install failed in $client_path"
+        Write-Host " - Error: npm install failed in $app" -ForegroundColor Red
         continue
     }
 
-    Write-Host "Finished updating $app"
+    Write-Host " - Finished $app" -ForegroundColor DarkGray
 }
 
 Write-Host "All apps updated!" -ForegroundColor Cyan
