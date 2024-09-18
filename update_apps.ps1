@@ -44,7 +44,6 @@ Write-Host "Apps recieved: $apps" -ForegroundColor Cyan
 
 # Commands to run in each directory
 $npm_install = "npm i @clutch-inc/usfa-ui@latest"
-$npm_run = "npm run copy-files"
 
 # Iterate through each app and run commands
 foreach ($app in $apps) {
@@ -59,12 +58,6 @@ foreach ($app in $apps) {
     # Run npm install and capture errors
     if (-not (Invoke-Expression $npm_install)) {
         Write-Host "Error: npm install failed in $client_path"
-        continue
-    }
-
-    # Run npm run and capture errors
-    if (-not (Invoke-Expression $npm_run)) {
-        Write-Host "Error: npm run copy-files failed in $client_path"
         continue
     }
 
