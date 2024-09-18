@@ -1,12 +1,20 @@
 $apps = $args
 
 $useProdSetup = $false
+$skipZip = $false
 
 # Check for the -prod flag in the arguments
 if ($args -contains '-prod') {
     $useProdSetup = $true
     # Remove the -prod flag from the $args array so it doesn't get treated as an app name
     $args = $args | Where-Object { $_ -ne '-prod' }
+}
+
+# Check for the -skipZip flag in the arguments
+if ($args -contains '-skipZip') {
+    $skipZip = $true
+    # Remove the -skipZip flag from the $args array so it doesn't get treated as an app name
+    $args = $args | Where-Object { $_ -ne '-skipZip' }
 }
 
 
@@ -52,6 +60,10 @@ if (-not $apps -or $apps.Count -eq 0) {
 # Debugging: Output the apps being processed
 Write-Host "Apps recieved: $apps" -ForegroundColor Cyan
 Write-Host "Using: $(if ($useProdSetup) { 'setup:prod' } else { 'setup' })" -ForegroundColor Yellow
+
+if ($skipZip) {
+    Write-Host "Skipping zip files." -ForegroundColor Yellow
+}
 
 
 $scriptStartTime = Get-Date
@@ -169,61 +181,79 @@ $baseReleasePath = "C:\Users\clutch\Documents\Clutch\Apps\Releases"
 
 
 # Creates a zip file for each app inside the apps/APP_NAME/Releases folder using the contents of the baseReleasePath Production folder
-foreach ($app in $apps) {
-    # Map short name to full name
-    if ($appMappings.Values -contains $app) {
-        Write-Host "Zipping $app ($zipIndex/$totalApps)..." -ForegroundColor DarkCyan
+if (!$skipZip) {
+    foreach ($app in $apps) {
+        # Map short name to full name
+        if ($appMappings.Values -contains $app) {
+            Write-Host "Zipping $app ($zipIndex/$totalApps)..." -ForegroundColor DarkCyan
 
-        $zipIndex++
+            $zipIndex++
 
-        # Define the paths for the app and client app
-        $appReleasesPath = Join-Path -Path $baseAppPath -ChildPath "$app\Releases"
-        $clientAppPath = Join-Path -Path $baseAppPath -ChildPath "$app\$app\ClientApp"
+            # Define the paths for the app and client app
+            $appReleasesPath = Join-Path -Path $baseAppPath -ChildPath "$app\Releases"
+            $clientAppPath = Join-Path -Path $baseAppPath -ChildPath "$app\$app\ClientApp"
 
-        # Define the path to the Production folder
-        $productionPath = Join-Path -Path $baseReleasePath -ChildPath "$app\Production"
+            # Define the path to the Production folder
+            $productionPath = Join-Path -Path $baseReleasePath -ChildPath "$app\Production"
 
-        # Check if the Production directory exists
-        if (Test-Path $productionPath) {
-            # Check if the Releases directory exists; if not, create it
-            if (-not (Test-Path $appReleasesPath)) {
-                Write-Host "Releases directory for $app not found at $appReleasesPath. Creating directory..." -ForegroundColor Yellow
-                New-Item -Path $appReleasesPath -ItemType Directory | Out-Null
-            }
+            # Check if the Production directory exists
+            if (Test-Path $productionPath) {
+                # Check if the Releases directory exists; if not, create it
+                if (-not (Test-Path $appReleasesPath)) {
+                    Write-Host "Releases directory for $app not found at $appReleasesPath. Creating directory..." -ForegroundColor Yellow
+                    New-Item -Path $appReleasesPath -ItemType Directory | Out-Null
+                }
 
-            # Read the version from package.json
-            $packageJsonPath = Join-Path -Path $clientAppPath -ChildPath "package.json"
-            if (Test-Path $packageJsonPath) {
-                $packageJson = Get-Content $packageJsonPath | Out-String | ConvertFrom-Json
-                $version = $packageJson.version
-                $zipFileName = "$app" + "_$version.zip"
+                # Read the version from package.json
+                $packageJsonPath = Join-Path -Path $clientAppPath -ChildPath "package.json"
+                if (Test-Path $packageJsonPath) {
+                    $packageJson = Get-Content $packageJsonPath | Out-String | ConvertFrom-Json
+                    $version = $packageJson.version
+
+                    # Ask the user if they want to increment the version number
+                    $incrementVersion = Read-Host " - Do you want to increment the version number? (y/n)"
+
+                    if ($incrementVersion -eq 'y') {
+                        # Ask for new version input
+                        Write-Host " - Current version: $version" -ForegroundColor DarkGray
+                        $newVersion = Read-Host " - Enter the new version number"
+                        if ($newVersion -match '^\d+\.\d+\.\d+$') { # Optional: Simple validation for semantic versioning format
+                            $version = $newVersion
+                        } else {
+                            Write-Host "Invalid version format. Using the existing version: $version" -ForegroundColor Yellow
+                        }
+                    }
+
+                    $zipFileName = "$app" + "_$version.zip"
+                } else {
+                    Write-Host "package.json not found in $clientAppPath. Skipping $app." -ForegroundColor Yellow
+                    continue
+                }
+
+
+                # Define the destination zip file within the app's root releases folder
+                $zipFilePath = Join-Path -Path $appReleasesPath -ChildPath $zipFileName
+
+                # Compress the contents of the Production folder into a zip file
+                Write-Host " - zipping contents into $zipFileName..." -ForegroundColor DarkGray
+                Compress-Archive -Path (Join-Path $productionPath '*') -DestinationPath $zipFilePath -Force
+
+                Write-Host "$app has been zipped successfully as $zipFileName." -ForegroundColor DarkGreen
+
+                # Delete the oldest zip file if there are more than 2 zip files in the Releases folder
+                $zipFiles = Get-ChildItem -Path $appReleasesPath -Filter "*.zip" | Sort-Object LastWriteTime
+                if ($zipFiles.Count -gt 2) {
+                    $oldestZipFile = $zipFiles[0]
+                    Write-Host " - Deleting oldest zip file: $($oldestZipFile.Name)..." -ForegroundColor DarkGray
+                    Remove-Item -Path $oldestZipFile.FullName -Force
+                    Write-Host "Oldest zip file $($oldestZipFile.Name) has been deleted." -ForegroundColor DarkGreen
+                }
             } else {
-                Write-Host "package.json not found in $clientAppPath. Skipping $app." -ForegroundColor Yellow
-                continue
-            }
-
-            # Define the destination zip file within the app's root releases folder
-            $zipFilePath = Join-Path -Path $appReleasesPath -ChildPath $zipFileName
-
-            # Compress the contents of the Production folder into a zip file
-            Write-Host " - zipping contents into $zipFileName..." -ForegroundColor DarkGray
-            Compress-Archive -Path (Join-Path $productionPath '*') -DestinationPath $zipFilePath -Force
-
-            Write-Host "$app has been zipped successfully as $zipFileName." -ForegroundColor DarkGreen
-
-            # Delete the oldest zip file if there are more than 2 zip files in the Releases folder
-            $zipFiles = Get-ChildItem -Path $appReleasesPath -Filter "*.zip" | Sort-Object LastWriteTime
-            if ($zipFiles.Count -gt 2) {
-                $oldestZipFile = $zipFiles[0]
-                Write-Host " - Deleting oldest zip file: $($oldestZipFile.Name)..." -ForegroundColor DarkGray
-                Remove-Item -Path $oldestZipFile.FullName -Force
-                Write-Host "Oldest zip file $($oldestZipFile.Name) has been deleted." -ForegroundColor DarkGreen
+                Write-Host "Production directory for $app not found at $productionPath. Skipping." -ForegroundColor Yellow
             }
         } else {
-            Write-Host "Production directory for $app not found at $productionPath. Skipping." -ForegroundColor Yellow
+            Write-Host "App short name '$app' not recognized. Skipping." -ForegroundColor Red
         }
-    } else {
-        Write-Host "App short name '$app' not recognized. Skipping." -ForegroundColor Red
     }
 }
 
