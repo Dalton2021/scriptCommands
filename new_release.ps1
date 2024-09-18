@@ -200,7 +200,7 @@ if (!$skipZip) {
             if (Test-Path $productionPath) {
                 # Check if the Releases directory exists; if not, create it
                 if (-not (Test-Path $appReleasesPath)) {
-                    Write-Host "Releases directory for $app not found at $appReleasesPath. Creating directory..." -ForegroundColor Yellow
+                    Write-Host "  - Releases directory for $app not found at $appReleasesPath. Creating directory..." -ForegroundColor Yellow
                     New-Item -Path $appReleasesPath -ItemType Directory | Out-Null
                 }
 
@@ -211,22 +211,28 @@ if (!$skipZip) {
                     $version = $packageJson.version
 
                     # Ask the user if they want to increment the version number
-                    $incrementVersion = Read-Host " - Do you want to increment the version number? (y/n)"
+                    $incrementVersion = Read-Host "  - Do you want to increment the version number? (y/n)"
 
                     if ($incrementVersion -eq 'y') {
                         # Ask for new version input
-                        Write-Host " - Current version: $version" -ForegroundColor DarkGray
-                        $newVersion = Read-Host " - Enter the new version number"
+                        Write-Host "  - Current version: $version" -ForegroundColor DarkGray
+                        $newVersion = Read-Host "  - Enter the new version number (x.x.x)"
                         if ($newVersion -match '^\d+\.\d+\.\d+$') { # Optional: Simple validation for semantic versioning format
+                            $packageJson.version = $newVersion
                             $version = $newVersion
+
+                            # Convert the updated JSON object back to a string and write it to the file
+                            $packageJson | ConvertTo-Json -Depth 100 | Set-Content -Path $packageJsonPath
+                            Write-Host "  - Version updated to $newVersion in package.json" -ForegroundColor DarkGray
                         } else {
-                            Write-Host "Invalid version format. Using the existing version: $version" -ForegroundColor Yellow
+                            Write-Host "  - Invalid version format. Using the existing version: $version" -ForegroundColor Yellow
                         }
                     }
 
+
                     $zipFileName = "$app" + "_$version.zip"
                 } else {
-                    Write-Host "package.json not found in $clientAppPath. Skipping $app." -ForegroundColor Yellow
+                    Write-Host "  - Package.json not found in $clientAppPath. Skipping $app." -ForegroundColor Yellow
                     continue
                 }
 
@@ -235,21 +241,21 @@ if (!$skipZip) {
                 $zipFilePath = Join-Path -Path $appReleasesPath -ChildPath $zipFileName
 
                 # Compress the contents of the Production folder into a zip file
-                Write-Host " - zipping contents into $zipFileName..." -ForegroundColor DarkGray
+                Write-Host "  - Zipping contents into $zipFileName..." -ForegroundColor DarkGray
                 Compress-Archive -Path (Join-Path $productionPath '*') -DestinationPath $zipFilePath -Force
 
-                Write-Host "$app has been zipped successfully as $zipFileName." -ForegroundColor DarkGreen
+                Write-Host "  - $zipFileName created successfully." -ForegroundColor DarkGreen
 
                 # Delete the oldest zip file if there are more than 2 zip files in the Releases folder
                 $zipFiles = Get-ChildItem -Path $appReleasesPath -Filter "*.zip" | Sort-Object LastWriteTime
-                if ($zipFiles.Count -gt 2) {
+                if ($zipFiles.Count -gt 3) {
                     $oldestZipFile = $zipFiles[0]
-                    Write-Host " - Deleting oldest zip file: $($oldestZipFile.Name)..." -ForegroundColor DarkGray
+                    Write-Host "  - Deleting oldest zip file: $($oldestZipFile.Name)..." -ForegroundColor DarkGray
                     Remove-Item -Path $oldestZipFile.FullName -Force
-                    Write-Host "Oldest zip file $($oldestZipFile.Name) has been deleted." -ForegroundColor DarkGreen
+                    Write-Host "  - Oldest zip file $($oldestZipFile.Name) has been deleted." -ForegroundColor DarkGray
                 }
             } else {
-                Write-Host "Production directory for $app not found at $productionPath. Skipping." -ForegroundColor Yellow
+                Write-Host "  - Production directory for $app not found at $productionPath. Skipping." -ForegroundColor Yellow
             }
         } else {
             Write-Host "App short name '$app' not recognized. Skipping." -ForegroundColor Red
