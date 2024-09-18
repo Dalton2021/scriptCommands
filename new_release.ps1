@@ -244,7 +244,7 @@ if (!$skipZip) {
                 Write-Host "  - Zipping contents into $zipFileName..." -ForegroundColor DarkGray
                 Compress-Archive -Path (Join-Path $productionPath '*') -DestinationPath $zipFilePath -Force
 
-                Write-Host "  - $zipFileName created successfully." -ForegroundColor DarkGreen
+                Write-Host "  - $zipFileName created successfully." -ForegroundColor DarkGray
 
                 # Delete the oldest zip file if there are more than 2 zip files in the Releases folder
                 $zipFiles = Get-ChildItem -Path $appReleasesPath -Filter "*.zip" | Sort-Object LastWriteTime
