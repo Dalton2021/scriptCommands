@@ -211,11 +211,11 @@ if (!$skipZip) {
                     $version = $packageJson.version
 
                     # Ask the user if they want to increment the version number
+                    Write-Host "  - Current version: $version" -ForegroundColor Yellow
                     $incrementVersion = Read-Host "  - Do you want to increment the version number? (y/n)"
 
                     if ($incrementVersion -eq 'y') {
                         # Ask for new version input
-                        Write-Host "  - Current version: $version" -ForegroundColor DarkGray
                         $newVersion = Read-Host "  - Enter the new version number (x.x.x)"
                         if ($newVersion -match '^\d+\.\d+\.\d+$') { # Optional: Simple validation for semantic versioning format
                             $packageJson.version = $newVersion
@@ -248,7 +248,7 @@ if (!$skipZip) {
 
                 # Delete the oldest zip file if there are more than 2 zip files in the Releases folder
                 $zipFiles = Get-ChildItem -Path $appReleasesPath -Filter "*.zip" | Sort-Object LastWriteTime
-                if ($zipFiles.Count -gt 3) {
+                if ($zipFiles.Count -gt 5) {
                     $oldestZipFile = $zipFiles[0]
                     Write-Host "  - Deleting oldest zip file: $($oldestZipFile.Name)..." -ForegroundColor DarkGray
                     Remove-Item -Path $oldestZipFile.FullName -Force
