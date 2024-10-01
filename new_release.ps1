@@ -10,10 +10,10 @@ if ($args -contains '-prod') {
     $args = $args | Where-Object { $_ -ne '-prod' }
 }
 
-# Check for the -skipZip flag in the arguments
+# Check for the -zip flag in the arguments
 if ($args -contains '-zip') {
     $zip = $true
-    # Remove the -skipZip flag from the $args array so it doesn't get treated as an app name
+    # Remove the -zip flag from the $args array so it doesn't get treated as an app name
     $args = $args | Where-Object { $_ -ne '-zip' }
 }
 
