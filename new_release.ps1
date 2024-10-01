@@ -1,7 +1,7 @@
 $apps = $args
 
 $useProdSetup = $false
-$skipZip = $false
+$zip = $false
 
 # Check for the -prod flag in the arguments
 if ($args -contains '-prod') {
@@ -11,10 +11,10 @@ if ($args -contains '-prod') {
 }
 
 # Check for the -skipZip flag in the arguments
-if ($args -contains '-skipZip') {
-    $skipZip = $true
+if ($args -contains '-zip') {
+    $zip = $true
     # Remove the -skipZip flag from the $args array so it doesn't get treated as an app name
-    $args = $args | Where-Object { $_ -ne '-skipZip' }
+    $args = $args | Where-Object { $_ -ne '-zip' }
 }
 
 
@@ -61,7 +61,7 @@ if (-not $apps -or $apps.Count -eq 0) {
 Write-Host "Apps recieved: $apps" -ForegroundColor Cyan
 Write-Host "Using: $(if ($useProdSetup) { 'setup:prod' } else { 'setup' })" -ForegroundColor Yellow
 
-if ($skipZip) {
+if (!$zip) {
     Write-Host "Skipping zip files." -ForegroundColor Yellow
 }
 
@@ -181,7 +181,7 @@ $baseReleasePath = "C:\Users\clutch\Documents\Clutch\Apps\Releases"
 
 
 # Creates a zip file for each app inside the apps/APP_NAME/Releases folder using the contents of the baseReleasePath Production folder
-if (!$skipZip) {
+if ($zip) {
     foreach ($app in $apps) {
         # Map short name to full name
         if ($appMappings.Values -contains $app) {
