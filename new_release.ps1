@@ -263,9 +263,6 @@ if ($zip) {
     }
 }
 
-
-
-
 # Calculate and log the total time taken for all apps
 $scriptEndTime = Get-Date
 $scriptDuration = $scriptEndTime - $scriptStartTime
