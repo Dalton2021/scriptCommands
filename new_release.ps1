@@ -1,36 +1,113 @@
-$apps = $args
+# $apps = $args
 
+# $useProdSetup = $false
+# $zip = $false
+
+# # Check for the -prod flag in the arguments
+# if ($args -contains '-prod') {
+#     $useProdSetup = $true
+#     # Remove the -prod flag from the $args array so it doesn't get treated as an app name
+#     $args = $args | Where-Object { $_ -ne '-prod' }
+# }
+
+# # Check for the -zip flag in the arguments
+# if ($args -contains '-zip') {
+#     $zip = $true
+#     # Remove the -zip flag from the $args array so it doesn't get treated as an app name
+#     $args = $args | Where-Object { $_ -ne '-zip' }
+# }
+
+
+# # Define base path
+# $baseAppPath = "C:\Users\clutch\Documents\Clutch\Apps"
+
+# # Define the mapping between short names and full app names
+# $appMappings = @{
+#     "civ" = "Civilian-Fatalities"
+#     "contact" = "Contact"
+#     "ff" = "Firefighter-Fatalities"
+#     "hotel" = "Hotel"
+#     "nfa" = "NFACourses"
+#     "pubs" = "Publications"
+#     "reg" = "Registry"
+#     "thes" = "Thesaurus"
+# }
+# # Define the list of all full app names
+# $allApps = $appMappings.Values
+
+# # If no apps are specified, use the full list
+# if (-not $apps -or $apps.Count -eq 0) {
+#     Write-Host "No specific apps provided, using all apps." -ForegroundColor Yellow
+#     $apps = $allApps
+# } else {
+#     # Convert short names to full names using the mapping
+#     $apps = $apps | ForEach-Object {
+#         if ($appMappings.ContainsKey($_)) {
+#             $appMappings[$_]
+#         } else {
+#             $_  # If not a short name, keep the original name
+#         }
+#     }
+
+#     # Validate the specified apps
+#     $apps = $apps | Where-Object { $allApps -contains $_ }
+#     if ($apps.Count -eq 0) {
+#         Write-Host "No valid apps specified, exiting." -ForegroundColor Red
+#         exit 1
+#     }
+# }
+
+# # Debugging: Output the apps being processed
+# Write-Host "Apps recieved: $apps" -ForegroundColor Cyan
+# Write-Host "Using: $(if ($useProdSetup) { 'setup:prod' } else { 'setup' })" -ForegroundColor Yellow
+
+
+### code above suddenly stopped working? Still works for update_apps though?
+
+# Initial setup
 $useProdSetup = $false
 $zip = $false
+$apps = @()
 
-# Check for the -prod flag in the arguments
-if ($args -contains '-prod') {
-    $useProdSetup = $true
-    # Remove the -prod flag from the $args array so it doesn't get treated as an app name
-    $args = $args | Where-Object { $_ -ne '-prod' }
+# Parse arguments
+for ($i = 0; $i -lt $args.Count; $i++) {
+    switch ($args[$i]) {
+        '-prod' {
+            $useProdSetup = $true
+        }
+        '-zip' {
+            $zip = $true
+        }
+        '-apps' {
+            # Collect all app names following the -apps flag
+            for ($j = $i + 1; $j -lt $args.Count; $j++) {
+                if ($args[$j].StartsWith('-')) {
+                    break
+                }
+                $apps += $args[$j]
+                $i = $j
+            }
+        }
+        default {
+            # Handle arguments not preceded by a recognized flag
+            $apps += $args[$i]
+        }
+    }
 }
-
-# Check for the -zip flag in the arguments
-if ($args -contains '-zip') {
-    $zip = $true
-    # Remove the -zip flag from the $args array so it doesn't get treated as an app name
-    $args = $args | Where-Object { $_ -ne '-zip' }
-}
-
 
 # Define base path
 $baseAppPath = "C:\Users\clutch\Documents\Clutch\Apps"
 
 # Define the mapping between short names and full app names
 $appMappings = @{
-    "civ" = "Civilian-Fatalities"
+    "civ"    = "Civilian-Fatalities"
     "contact" = "Contact"
-    "ff" = "Firefighter-Fatalities"
-    "hotel" = "Hotel"
-    "nfa" = "NFACourses"
-    "pubs" = "Publications"
-    "reg" = "Registry"
-    "thes" = "Thesaurus"
+    "ff"      = "Firefighter-Fatalities"
+    "hotel"   = "Hotel"
+    "nfa"     = "NFACourses"
+    "pubs"    = "Publications"
+    "reg"     = "Registry"
+    "thes"    = "Thesaurus"
 }
 # Define the list of all full app names
 $allApps = $appMappings.Values
@@ -57,9 +134,11 @@ if (-not $apps -or $apps.Count -eq 0) {
     }
 }
 
-# Debugging: Output the apps being processed
-Write-Host "Apps recieved: $apps" -ForegroundColor Cyan
+# Debugging: Output the parsed values
+Write-Host "Apps received: $apps" -ForegroundColor Cyan
 Write-Host "Using: $(if ($useProdSetup) { 'setup:prod' } else { 'setup' })" -ForegroundColor Yellow
+Write-Host "Zip: $zip" -ForegroundColor Green
+
 
 if (!$zip) {
     Write-Host "Skipping zip files." -ForegroundColor Yellow
