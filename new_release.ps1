@@ -137,7 +137,6 @@ if (-not $apps -or $apps.Count -eq 0) {
 # Debugging: Output the parsed values
 Write-Host "Apps received: $apps" -ForegroundColor Cyan
 Write-Host "Using: $(if ($useProdSetup) { 'setup:prod' } else { 'setup' })" -ForegroundColor Yellow
-Write-Host "Zip: $zip" -ForegroundColor Green
 
 
 if (!$zip) {
@@ -186,7 +185,7 @@ foreach ($app in $apps) {
         }
 
         # Wait for dotnet run to start properly
-        Start-Sleep -Seconds 8
+        Start-Sleep -Seconds 16 #used to be 8 seconds, but dotnet updated and is a lot slower to start up.
 
         # Start npm run setup in a new terminal window
         # $npmProcess = Start-TerminalAndRun -command "npm run setup" -workingDirectory $clientAppPath
