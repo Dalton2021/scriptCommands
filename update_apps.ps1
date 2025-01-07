@@ -69,7 +69,7 @@
 
 
 param (
-    [string]$v = "@latest",
+    [string]$v = "latest",
     [string[]]$apps
 )
 
