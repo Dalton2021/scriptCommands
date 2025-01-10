@@ -1,82 +1,19 @@
-# $apps = $args
-
-# $useProdSetup = $false
-# $zip = $false
-
-# # Check for the -prod flag in the arguments
-# if ($args -contains '-prod') {
-#     $useProdSetup = $true
-#     # Remove the -prod flag from the $args array so it doesn't get treated as an app name
-#     $args = $args | Where-Object { $_ -ne '-prod' }
-# }
-
-# # Check for the -zip flag in the arguments
-# if ($args -contains '-zip') {
-#     $zip = $true
-#     # Remove the -zip flag from the $args array so it doesn't get treated as an app name
-#     $args = $args | Where-Object { $_ -ne '-zip' }
-# }
-
-
-# # Define base path
-# $baseAppPath = "C:\Users\clutch\Documents\Clutch\Apps"
-
-# # Define the mapping between short names and full app names
-# $appMappings = @{
-#     "civ" = "Civilian-Fatalities"
-#     "contact" = "Contact"
-#     "ff" = "Firefighter-Fatalities"
-#     "hotel" = "Hotel"
-#     "nfa" = "NFACourses"
-#     "pubs" = "Publications"
-#     "reg" = "Registry"
-#     "thes" = "Thesaurus"
-# }
-# # Define the list of all full app names
-# $allApps = $appMappings.Values
-
-# # If no apps are specified, use the full list
-# if (-not $apps -or $apps.Count -eq 0) {
-#     Write-Host "No specific apps provided, using all apps." -ForegroundColor Yellow
-#     $apps = $allApps
-# } else {
-#     # Convert short names to full names using the mapping
-#     $apps = $apps | ForEach-Object {
-#         if ($appMappings.ContainsKey($_)) {
-#             $appMappings[$_]
-#         } else {
-#             $_  # If not a short name, keep the original name
-#         }
-#     }
-
-#     # Validate the specified apps
-#     $apps = $apps | Where-Object { $allApps -contains $_ }
-#     if ($apps.Count -eq 0) {
-#         Write-Host "No valid apps specified, exiting." -ForegroundColor Red
-#         exit 1
-#     }
-# }
-
-# # Debugging: Output the apps being processed
-# Write-Host "Apps recieved: $apps" -ForegroundColor Cyan
-# Write-Host "Using: $(if ($useProdSetup) { 'setup:prod' } else { 'setup' })" -ForegroundColor Yellow
-
-
-### code above suddenly stopped working? Still works for update_apps though?
-
 # Initial setup
-$useProdSetup = $false
 $zip = $false
 $apps = @()
+$appEnv = ""
 
 # Parse arguments
 for ($i = 0; $i -lt $args.Count; $i++) {
     switch ($args[$i]) {
-        '-prod' {
-            $useProdSetup = $true
-        }
         '-zip' {
             $zip = $true
+        }
+        '-appEnv' {  # Changed to -appEnv for consistency
+            if ($i + 1 -lt $args.Count) {
+                $appEnv = $args[$i + 1]
+                $i++  # Skip the next argument since we've used it
+            }
         }
         '-apps' {
             # Collect all app names following the -apps flag
@@ -134,9 +71,9 @@ if (-not $apps -or $apps.Count -eq 0) {
     }
 }
 
-# Debugging: Output the parsed values
+# Display the tasks
 Write-Host "Apps received: $apps" -ForegroundColor Cyan
-Write-Host "Using: $(if ($useProdSetup) { 'setup:prod' } else { 'setup' })" -ForegroundColor Yellow
+Write-Host "Using: $(if ($appEnv) { "setup:branch --APP_ENV=${appEnv}" } else { 'setup' })" -ForegroundColor Yellow
 
 
 if (!$zip) {
@@ -161,7 +98,6 @@ $totalApps = $apps.Count
 $buildIndex = 1
 $zipIndex = 1
 
-
 foreach ($app in $apps) {
     Write-Host "Processing $app ($buildIndex/$totalApps)..." -ForegroundColor DarkCyan
 
@@ -170,75 +106,42 @@ foreach ($app in $apps) {
     # Start timing for this app
     $appStartTime = Get-Date
 
-    # Define paths for dotnet app and client app
+    # Define paths for dotnet app
     $dotnetAppPath = Join-Path -Path $baseAppPath -ChildPath "$app\$app"
-    $clientAppPath = Join-Path -Path $baseAppPath -ChildPath "$app\$app\ClientApp"
 
     try {
-        # Start dotnet run in a new terminal window
-        $dotnetProcess = Start-TerminalAndRun -command "dotnet run" -workingDirectory $dotnetAppPath
-        if ($dotnetProcess) {
-            Write-Host "  - dotnet run started" -ForegroundColor DarkGray
+        if ($appEnv) {
+            # If appEnv is set, only do Branch build with the environment parameter
+            $msbuildBranchCommand = "dotnet msbuild -p:DeployOnBuild=true -p:PublishProfile=Properties\PublishProfiles\Branch.pubxml -p:AppEnv=${appEnv}"
+            $branchProcess = Start-TerminalAndRun -command "$msbuildBranchCommand" -workingDirectory $dotnetAppPath
+            Write-Host "  - dotnet msbuild for Branch started" -ForegroundColor DarkGray
+
+            $branchProcess.WaitForExit()
+
+            Write-Host "  - COMPLETED dotnet msbuild for Branch" -ForegroundColor DarkGray
         } else {
-            Write-Host "Error: dotnet run failed to start for $app" -ForegroundColor Red
-            continue
-        }
+            # If no appEnv, do the original Staging and Production builds
 
-        # Wait for dotnet run to start properly
-        Start-Sleep -Seconds 16 #used to be 8 seconds, but dotnet updated and is a lot slower to start up.
-
-        # Start npm run setup in a new terminal window
-        # $npmProcess = Start-TerminalAndRun -command "npm run setup" -workingDirectory $clientAppPath
-
-        $npmCommand = if ($useProdSetup) { "npm run setup:prod" } else { "npm run setup" }
-        $npmProcess = Start-TerminalAndRun -command $npmCommand -workingDirectory $clientAppPath
-
-        if ($npmProcess) {
-            Write-Host "  - npm run setup started"  -ForegroundColor DarkGray
-        } else {
-            Write-Host "Error: npm run setup failed to start for $app" -ForegroundColor Red
-            continue
-        }
-
-        # Wait for npm setup to complete
-        $npmProcess.WaitForExit()
-        Write-Host "  - COMPLETED npm run setup"  -ForegroundColor DarkGray
-
-        $dotnetProcess = Get-Process -Name "dotnet" -ErrorAction SilentlyContinue
-        if ($dotnetProcess) {
-            Stop-Process -Id $dotnetProcess.Id -Force
-            Write-Host "  - STOPPED dotnet run terminal"  -ForegroundColor DarkGray
-        }
-
-
-        # Kill npm process if not already
-        $npmProcess = Get-Process -Id $npmProcess.Id -ErrorAction SilentlyContinue
-        if ($npmProcess) {
-            Stop-Process -Id $npmProcess.Id -Force
-            Write-Host "  - STOPPED npm terminal" -ForegroundColor DarkGray
-        }
-
-
-        if ($useProdSetup -eq $false) {
-            # Run the first msbuild command for Staging in the same terminal window
+            # Staging
             $msbuildStagingCommand = "dotnet msbuild -p:DeployOnBuild=true -p:PublishProfile=Properties\PublishProfiles\Staging.pubxml"
             $stagingProcess = Start-TerminalAndRun -command "$msbuildStagingCommand" -workingDirectory $dotnetAppPath
             Write-Host "  - dotnet msbuild for Staging started" -ForegroundColor DarkGray
 
             $stagingProcess.WaitForExit()
 
-            Write-Host "  - COMPLETED dotnet msbuild for Staging"  -ForegroundColor DarkGray
+            Write-Host "  - COMPLETED dotnet msbuild for Staging" -ForegroundColor DarkGray
+
+            # Prod
+            $msbuildProductionCommand = "dotnet msbuild -p:DeployOnBuild=true -p:PublishProfile=Properties\PublishProfiles\Production.pubxml"
+            $productionProcess = Start-TerminalAndRun -command "$msbuildProductionCommand" -workingDirectory $dotnetAppPath
+            Write-Host "  - dotnet msbuild for Production" -ForegroundColor DarkGray
+
+            $productionProcess.WaitForExit()
+
+            Write-Host "  - COMPLETED dotnet msbuild for Production" -ForegroundColor DarkGray
         }
-        # Run the second msbuild command for Production in the same terminal window
-        $msbuildProductionCommand = "dotnet msbuild -p:DeployOnBuild=true -p:PublishProfile=Properties\PublishProfiles\Production.pubxml"
-        $productionProcess = Start-TerminalAndRun -command "$msbuildProductionCommand" -workingDirectory $dotnetAppPath
-        Write-Host "  - dotnet msbuild for Production"  -ForegroundColor DarkGray
 
-        $productionProcess.WaitForExit()
-
-        Write-Host "  - COMPLETED dotnet msbuild for Production"  -ForegroundColor DarkGray
-
-        # Calculate and log the time taken for this app
+        # Log the time
         $appEndTime = Get-Date
         $appDuration = $appEndTime - $appStartTime
         $minutes = [math]::Floor($appDuration.TotalMinutes)
@@ -253,13 +156,12 @@ foreach ($app in $apps) {
     }
 }
 
-
 # Define the base path where the folders are located
 $baseReleasePath = "C:\Users\clutch\Documents\Clutch\Apps\Releases"
 
 
-# Creates a zip file for each app inside the apps/APP_NAME/Releases folder using the contents of the baseReleasePath Production folder
-if ($zip) {
+# Creates a zip file for each app inside the apps/APP_NAME/Releases folder using the prod folder
+if ($zip -and -not $appEnv) {
     foreach ($app in $apps) {
         # Map short name to full name
         if ($appMappings.Values -contains $app) {
@@ -288,7 +190,7 @@ if ($zip) {
                     $packageJson = Get-Content $packageJsonPath | Out-String | ConvertFrom-Json
                     $version = $packageJson.version
 
-                    # Ask the user if they want to increment the version number
+                    # Ask for version increment if needed
                     Write-Host "  - Current version: $version" -ForegroundColor Yellow
                     $incrementVersion = Read-Host "  - Do you want to increment the version number? (y/n)"
 
