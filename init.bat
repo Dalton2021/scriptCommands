@@ -17,6 +17,7 @@ doskey registry = cd c:\Users\clutch\Documents\Clutch\Apps\Registry\Registry
 doskey releases = cd c:\Users\clutch\Documents\Clutch\Apps\Releases
 doskey thes = cd c:\Users\clutch\Documents\Clutch\Apps\Thesaurus\Thesaurus
 doskey usfa-ui = cd c:\Users\clutch\Documents\Clutch\Apps\USFA-UI\USFA-UI
+doskey usfa-ui-admin = cd c:\Users\clutch\Documents\Clutch\Apps\USFA-UI-Admin
 doskey usfa-common = cd c:\Users\clutch\Documents\Clutch\Apps\USFA-Common-React
 doskey scripts = cd c:\Users\clutch\Documents\Clutch\ScriptCommands
 
