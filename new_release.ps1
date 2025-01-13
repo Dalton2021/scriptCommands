@@ -1,3 +1,5 @@
+. "C:\Users\clutch\Documents\Clutch\ScriptCommands\functions.ps1"
+
 # Initial setup
 $zip = $false
 $apps = @()
@@ -9,7 +11,7 @@ for ($i = 0; $i -lt $args.Count; $i++) {
         '-zip' {
             $zip = $true
         }
-        '-appEnv' {  # Changed to -appEnv for consistency
+        '-appEnv' {
             if ($i + 1 -lt $args.Count) {
                 $appEnv = $args[$i + 1]
                 $i++  # Skip the next argument since we've used it
@@ -32,6 +34,15 @@ for ($i = 0; $i -lt $args.Count; $i++) {
     }
 }
 
+
+Write-Host "`n"
+Write-FancyText "========================================" -ForegroundColor White
+Write-FancyText "        INITIATING NEW RELEASE          " -ForegroundColor Red
+Write-FancyText "========================================" -ForegroundColor White
+Write-Host "`n"
+
+Start-Sleep -Seconds 1
+
 # Define base path
 $baseAppPath = "C:\Users\clutch\Documents\Clutch\Apps"
 
@@ -46,12 +57,16 @@ $appMappings = @{
     "reg"     = "Registry"
     "thes"    = "Thesaurus"
 }
+
 # Define the list of all full app names
 $allApps = $appMappings.Values
 
 # If no apps are specified, use the full list
 if (-not $apps -or $apps.Count -eq 0) {
-    Write-Host "No specific apps provided, using all apps." -ForegroundColor Yellow
+    Write-Host -NoNewline "~ No specific apps provided, using all apps. `t" -ForegroundColor Yellow
+    Show-LoadingSpinner -Duration 2 -Delay 150
+    Write-Host ""  # Add a new line after the spinner
+
     $apps = $allApps
 } else {
     # Convert short names to full names using the mapping
@@ -66,37 +81,47 @@ if (-not $apps -or $apps.Count -eq 0) {
     # Validate the specified apps
     $apps = $apps | Where-Object { $allApps -contains $_ }
     if ($apps.Count -eq 0) {
-        Write-Host "No valid apps specified, exiting." -ForegroundColor Red
+        Write-Host "~ No valid apps specified, exiting." -ForegroundColor Red
         exit 1
     }
+
+    Write-Host "~ Apps received: `t" -NoNewline -ForegroundColor Yellow
+    Show-LoadingSpinner -Duration 2 -Delay 150
+
+    foreach ($app in $apps) {
+        Start-Sleep -Milliseconds 250
+
+        # Check if the current app is NOT the last app
+        if ($app -ne $apps[$apps.Count - 1]) {
+            # Print the app with a bar
+            Write-Host -NoNewline " $app |" -ForegroundColor Cyan
+        } else {
+            Write-Host " $app" -ForegroundColor Cyan
+        }
+    }
+
+
 }
 
-# Display the tasks
-Write-Host "Apps received: $apps" -ForegroundColor Cyan
-Write-Host "Using: $(if ($appEnv) { "setup:branch --APP_ENV=${appEnv}" } else { 'setup' })" -ForegroundColor Yellow
+Write-Host "~ Using: $(if ($appEnv) { "setup:branch --APP_ENV=${appEnv}" } else { 'setup' }) `t" -NoNewline -ForegroundColor Yellow
+Show-LoadingSpinner -Duration 2 -Delay 150
+Write-Host ""  # Add a new line after the spinner
 
 
 if (!$zip) {
-    Write-Host "Skipping zip files." -ForegroundColor Yellow
+    Write-Host "~ Skipping zip files. `t" -NoNewline -ForegroundColor Yellow
+} else {
+    Write-Host "~ Creating zip files. `t" -NoNewline -ForegroundColor Yellow
 }
+Show-LoadingSpinner -Duration 2 -Delay 150
 
 
 $scriptStartTime = Get-Date
-
-# Function to start a command in a new terminal window
-function Start-TerminalAndRun {
-    param (
-        [string]$command,
-        [string]$workingDirectory
-    )
-    $process = Start-Process "powershell" -ArgumentList "-NoExit", "-Command", "cd `"$workingDirectory`"; $command; exit" -PassThru
-    return $process
-}
-
 $totalApps = $apps.Count
-
 $buildIndex = 1
 $zipIndex = 1
+
+Write-Host "`n"
 
 foreach ($app in $apps) {
     Write-Host "Processing $app ($buildIndex/$totalApps)..." -ForegroundColor DarkCyan
@@ -113,8 +138,13 @@ foreach ($app in $apps) {
         if ($appEnv) {
             # If appEnv is set, only do Branch build with the environment parameter
             $msbuildBranchCommand = "dotnet msbuild -p:DeployOnBuild=true -p:PublishProfile=Properties\PublishProfiles\Branch.pubxml -p:AppEnv=${appEnv}"
+
             $branchProcess = Start-TerminalAndRun -command "$msbuildBranchCommand" -workingDirectory $dotnetAppPath
-            Write-Host "  - dotnet msbuild for Branch started" -ForegroundColor DarkGray
+
+            Write-Host "  - dotnet msbuild for Branch started`t" -NoNewline -ForegroundColor DarkGray
+            Show-LoadingSpinner -Process $branchProcess
+
+            Write-Host ""  # Add a new line after the spinner
 
             $branchProcess.WaitForExit()
 
@@ -125,7 +155,9 @@ foreach ($app in $apps) {
             # Staging
             $msbuildStagingCommand = "dotnet msbuild -p:DeployOnBuild=true -p:PublishProfile=Properties\PublishProfiles\Staging.pubxml"
             $stagingProcess = Start-TerminalAndRun -command "$msbuildStagingCommand" -workingDirectory $dotnetAppPath
-            Write-Host "  - dotnet msbuild for Staging started" -ForegroundColor DarkGray
+            Write-Host "  - dotnet msbuild for Staging started`t" -NoNewline -ForegroundColor DarkGray
+            Show-LoadingSpinner -Duration 2 -Delay 150
+            Write-Host ""  # Add a new line after the spinner
 
             $stagingProcess.WaitForExit()
 
@@ -134,7 +166,9 @@ foreach ($app in $apps) {
             # Prod
             $msbuildProductionCommand = "dotnet msbuild -p:DeployOnBuild=true -p:PublishProfile=Properties\PublishProfiles\Production.pubxml"
             $productionProcess = Start-TerminalAndRun -command "$msbuildProductionCommand" -workingDirectory $dotnetAppPath
-            Write-Host "  - dotnet msbuild for Production" -ForegroundColor DarkGray
+            Write-Host "  - dotnet msbuild for Production`t" -NoNewline -ForegroundColor DarkGray
+            Show-LoadingSpinner -Duration 2 -Delay 150
+            Write-Host ""  # Add a new line after the spinner
 
             $productionProcess.WaitForExit()
 
@@ -159,6 +193,9 @@ foreach ($app in $apps) {
 # Define the base path where the folders are located
 $baseReleasePath = "C:\Users\clutch\Documents\Clutch\Apps\Releases"
 
+
+Write-Host "`n"
+Write-Host "Starting zip file creation..." -ForegroundColor DarkCyan
 
 # Creates a zip file for each app inside the apps/APP_NAME/Releases folder using the prod folder
 if ($zip -and -not $appEnv) {
@@ -252,4 +289,46 @@ $totalMinutesLabel = if ($totalMinutes -eq 1) { "minute" } else { "minutes" }
 $totalSecondsLabel = if ($totalSeconds -eq 1) { "second" } else { "seconds" }
 
 Write-Host "All apps finished in $totalMinutes $totalMinutesLabel and $totalSeconds $totalSecondsLabel" -ForegroundColor Cyan
+Write-Host "`n"
+Start-Sleep -Seconds 1
+
+
+Write-Host "Generating preview build URLs...`t" -NoNewline -ForegroundColor Red
+Show-LoadingSpinner -Duration 2 -Delay 150
+Write-Host ""  # Add a new line after the spinner
+
+if ($appEnv) {
+    Write-Host "`n"
+    Write-FancyText "========================================" -ForegroundColor White
+    Write-FancyText "             PREVIEW URLs    " -ForegroundColor Red
+    Write-FancyText "========================================" -ForegroundColor White
+    Write-Host "`n"
+
+    $tableData = @()
+
+    foreach ($app in $apps) {
+        $appLower = $app.ToLower()
+        $url = "https://usfa-apps.clutch-inc.com/preview/$appLower/$appEnv/catalog/search"
+
+        if ($app -eq "NFACourses") {
+            $url = "https://usfa-apps.clutch-inc.com/preview/nfacourses/$appEnv/catalog/search"
+        }
+
+        if ($app -eq "Contact") {
+            $url = "https://usfa-apps.clutch-inc.com/preview/contact/$appEnv/fief"
+        }
+
+        $tableData += @{
+            App = $app
+            URL = $url
+        }
+    }
+
+    $headers = @("App", "URL")
+    $columnWidths = @(25, 80) # Adjust widths based on data
+    $colors = @("Red", "Gray")
+
+    Start-Sleep -Milliseconds 1200
+    Print-Table -Data $tableData -Headers $headers -ColumnWidths $columnWidths -Colors $colors
+}
 
