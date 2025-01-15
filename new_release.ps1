@@ -98,6 +98,8 @@ if (-not $apps -or $apps.Count -eq 0) {
         } else {
             Write-Host " $app" -ForegroundColor Cyan
         }
+
+        Write-Host "";
     }
 
 
@@ -329,6 +331,6 @@ if ($appEnv) {
     $colors = @("Red", "Gray")
 
     Start-Sleep -Milliseconds 1200
-    Print-Table -Data $tableData -Headers $headers -ColumnWidths $columnWidths -Colors $colors
+    Show-Table -Data $tableData -Headers $headers -ColumnWidths $columnWidths -Colors $colors
 }
 
