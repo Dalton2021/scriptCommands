@@ -196,11 +196,14 @@ foreach ($app in $apps) {
 $baseReleasePath = "C:\Users\clutch\Documents\Clutch\Apps\Releases"
 
 
-Write-Host "`n"
-Write-Host "Starting zip file creation..." -ForegroundColor DarkCyan
-
 # Creates a zip file for each app inside the apps/APP_NAME/Releases folder using the prod folder
 if ($zip -and -not $appEnv) {
+    Write-Host "`n"
+    Write-FancyText "========================================" -ForegroundColor White
+    Write-FancyText "           GENERATING ZIP FILES    " -ForegroundColor Red
+    Write-FancyText "========================================" -ForegroundColor White
+    Write-Host "`n"
+
     foreach ($app in $apps) {
         # Map short name to full name
         if ($appMappings.Values -contains $app) {
@@ -295,14 +298,10 @@ Write-Host "`n"
 Start-Sleep -Seconds 1
 
 
-Write-Host "Generating preview build URLs...`t" -NoNewline -ForegroundColor Red
-Show-LoadingSpinner -Duration 2 -Delay 150
-Write-Host ""  # Add a new line after the spinner
-
 if ($appEnv) {
     Write-Host "`n"
     Write-FancyText "========================================" -ForegroundColor White
-    Write-FancyText "             PREVIEW URLs    " -ForegroundColor Red
+    Write-FancyText "         GENERATING PREVIEW URLs    " -ForegroundColor Red
     Write-FancyText "========================================" -ForegroundColor White
     Write-Host "`n"
 
