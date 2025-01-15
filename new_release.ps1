@@ -43,6 +43,8 @@ Write-Host "`n"
 
 Start-Sleep -Seconds 1
 
+### Display build info
+
 # Define base path
 $baseAppPath = "C:\Users\clutch\Documents\Clutch\Apps"
 
@@ -91,21 +93,17 @@ if (-not $apps -or $apps.Count -eq 0) {
     foreach ($app in $apps) {
         Start-Sleep -Milliseconds 250
 
-        # Check if the current app is NOT the last app
-        if ($app -ne $apps[$apps.Count - 1]) {
+        if ($app -ne $apps[$apps.Count - 1] -and $apps.Count -ne 1) {
             # Print the app with a bar
             Write-Host -NoNewline " $app |" -ForegroundColor Cyan
         } else {
             Write-Host " $app" -ForegroundColor Cyan
         }
-
-        Write-Host "";
     }
-
 
 }
 
-Write-Host "~ Using: $(if ($appEnv) { "setup:branch --APP_ENV=${appEnv}" } else { 'setup' }) `t" -NoNewline -ForegroundColor Yellow
+Write-Host "~ Using: $(if ($appEnv) { "setup:branch --APP_ENV=${appEnv} `t" } else { "setup `t" })" -NoNewline -ForegroundColor Yellow
 Show-LoadingSpinner -Duration 2 -Delay 150
 Write-Host ""  # Add a new line after the spinner
 
@@ -122,9 +120,11 @@ $scriptStartTime = Get-Date
 $totalApps = $apps.Count
 $buildIndex = 1
 $zipIndex = 1
+$failedApps = @()
 
 Write-Host "`n"
 
+### Build the apps
 foreach ($app in $apps) {
     Write-Host "Processing $app ($buildIndex/$totalApps)..." -ForegroundColor DarkCyan
 
@@ -136,60 +136,60 @@ foreach ($app in $apps) {
     # Define paths for dotnet app
     $dotnetAppPath = Join-Path -Path $baseAppPath -ChildPath "$app\$app"
 
-    try {
-        if ($appEnv) {
-            # If appEnv is set, only do Branch build with the environment parameter
-            $msbuildBranchCommand = "dotnet msbuild -p:DeployOnBuild=true -p:PublishProfile=Properties\PublishProfiles\Branch.pubxml -p:AppEnv=${appEnv}"
+    if ($appEnv) {
+        # If appEnv is set, only do Branch build with the environment parameter
 
-            $branchProcess = Start-TerminalAndRun -command "$msbuildBranchCommand" -workingDirectory $dotnetAppPath
+        ### Branch
+        $msbuildBranchCommand = "dotnet msbuild -p:DeployOnBuild=true -p:PublishProfile=Properties\PublishProfiles\Branch.pubxml -p:AppEnv=${appEnv}"
+        $branchProcess = Start-TerminalAndRun -command "$msbuildBranchCommand" -workingDirectory $dotnetAppPath
 
-            Write-Host "  - dotnet msbuild for Branch started`t" -NoNewline -ForegroundColor DarkGray
-            Show-LoadingSpinner -Process $branchProcess
+        Write-Host "  - dotnet msbuild for Branch started `t" -NoNewline -ForegroundColor DarkGray
+        Show-LoadingSpinner -Process $branchProcess
 
-            Write-Host ""  # Add a new line after the spinner
+        Write-Host ""  # Add a new line after the spinner
 
-            $branchProcess.WaitForExit()
+        Wait-AndCheckMsBuildProcess -Process $branchProcess -BuildName "Branch"
+    } else {
+        # If no appEnv, do the original Staging and Production builds
 
-            Write-Host "  - COMPLETED dotnet msbuild for Branch" -ForegroundColor DarkGray
-        } else {
-            # If no appEnv, do the original Staging and Production builds
+        ### Staging
+        $msbuildStagingCommand = 'dotnet msbuild -p:DeployOnBuild=true -p:PublishProfile=Properties\PublishProfiles\Staging.pubxml'
+        $stagingProcess = Start-TerminalAndRun -command $msbuildStagingCommand -workingDirectory $dotnetAppPath
 
-            # Staging
-            $msbuildStagingCommand = "dotnet msbuild -p:DeployOnBuild=true -p:PublishProfile=Properties\PublishProfiles\Staging.pubxml"
-            $stagingProcess = Start-TerminalAndRun -command "$msbuildStagingCommand" -workingDirectory $dotnetAppPath
-            Write-Host "  - dotnet msbuild for Staging started`t" -NoNewline -ForegroundColor DarkGray
-            Show-LoadingSpinner -Duration 2 -Delay 150
-            Write-Host ""  # Add a new line after the spinner
+        Write-Host "  - dotnet msbuild for Staging started `t" -NoNewline -ForegroundColor DarkGray
+        Show-LoadingSpinner -Process $stagingProcess
 
-            $stagingProcess.WaitForExit()
+        Write-Host "" # Add a new line after the spinner
 
-            Write-Host "  - COMPLETED dotnet msbuild for Staging" -ForegroundColor DarkGray
+        $stagingSucceeded = Wait-AndCheckMsBuildProcess -Process $stagingProcess -BuildName "Staging"
 
-            # Prod
-            $msbuildProductionCommand = "dotnet msbuild -p:DeployOnBuild=true -p:PublishProfile=Properties\PublishProfiles\Production.pubxml"
-            $productionProcess = Start-TerminalAndRun -command "$msbuildProductionCommand" -workingDirectory $dotnetAppPath
-            Write-Host "  - dotnet msbuild for Production`t" -NoNewline -ForegroundColor DarkGray
-            Show-LoadingSpinner -Duration 2 -Delay 150
-            Write-Host ""  # Add a new line after the spinner
 
-            $productionProcess.WaitForExit()
 
-            Write-Host "  - COMPLETED dotnet msbuild for Production" -ForegroundColor DarkGray
+        ### Prod
+        $msbuildProductionCommand = "dotnet msbuild -p:DeployOnBuild=true -p:PublishProfile=Properties\PublishProfiles\Production.pubxml"
+        $productionProcess = Start-TerminalAndRun -command "$msbuildProductionCommand" -workingDirectory $dotnetAppPath
+
+        Write-Host "  - dotnet msbuild for Production started `t" -NoNewline -ForegroundColor DarkGray
+        Show-LoadingSpinner -Process $productionProcess
+
+        Write-Host ""  # Add a new line after the spinner
+
+        $productionSucceeded = Wait-AndCheckMsBuildProcess -Process $productionProcess -BuildName "Production"
+
+        if ($stagingSucceeded -eq $false -or $productionSucceeded -eq $false) {
+            $failedApps += $app
         }
-
-        # Log the time
-        $appEndTime = Get-Date
-        $appDuration = $appEndTime - $appStartTime
-        $minutes = [math]::Floor($appDuration.TotalMinutes)
-        $seconds = $appDuration.Seconds
-        $minuteLabel = if ($minutes -eq 1) { "minute" } else { "minutes" }
-        $secondLabel = if ($seconds -eq 1) { "second" } else { "seconds" }
-
-        Write-Host "Finished $app in $minutes $minuteLabel and $seconds $secondLabel" -ForegroundColor DarkGreen
     }
-    catch {
-        Write-Host "Error encountered while processing {$app}: $_" -ForegroundColor Red
-    }
+
+    # Log the time
+    $appEndTime = Get-Date
+    $appDuration = $appEndTime - $appStartTime
+    $minutes = [math]::Floor($appDuration.TotalMinutes)
+    $seconds = $appDuration.Seconds
+    $minuteLabel = if ($minutes -eq 1) { "minute" } else { "minutes" }
+    $secondLabel = if ($seconds -eq 1) { "second" } else { "seconds" }
+
+    Write-Host "Finished $app in $minutes $minuteLabel and $seconds $secondLabel" -ForegroundColor DarkGreen
 }
 
 # Define the base path where the folders are located
@@ -200,11 +200,18 @@ $baseReleasePath = "C:\Users\clutch\Documents\Clutch\Apps\Releases"
 if ($zip -and -not $appEnv) {
     Write-Host "`n"
     Write-FancyText "========================================" -ForegroundColor White
-    Write-FancyText "           GENERATING ZIP FILES    " -ForegroundColor Red
+    Write-FancyText "          GENERATING ZIP FILES          " -ForegroundColor Red
     Write-FancyText "========================================" -ForegroundColor White
     Write-Host "`n"
 
     foreach ($app in $apps) {
+        # Skip apps that failed to build in either prod / staging
+        if ($failedApps -contains $app) {
+            Write-Host "Skipping $app due to build failure. ($zipIndex/$totalApps)..." -ForegroundColor Red
+            $zipIndex++
+
+            continue
+        }
         # Map short name to full name
         if ($appMappings.Values -contains $app) {
             Write-Host "Zipping $app ($zipIndex/$totalApps)..." -ForegroundColor DarkCyan
@@ -234,8 +241,10 @@ if ($zip -and -not $appEnv) {
 
                     # Ask for version increment if needed
                     Write-Host "  - Current version: $version" -ForegroundColor Yellow
-                    $incrementVersion = Read-Host "  - Do you want to increment the version number? (y/n)"
 
+                    $incrementVersion = Get-YesOrNoInput -PromptMessage ("  - Do you want to increment the version number? (y/n)" + $(if ($zipIndex - 1 -eq 1) { "`a" }))
+
+                    # Handle user response
                     if ($incrementVersion -eq 'y') {
                         # Ask for new version input
                         $newVersion = Read-Host "  - Enter the new version number (x.x.x)"
@@ -249,6 +258,8 @@ if ($zip -and -not $appEnv) {
                         } else {
                             Write-Host "  - Invalid version format. Using the existing version: $version" -ForegroundColor Yellow
                         }
+                    } else {
+                        Write-Host "  - Version number not incremented." -ForegroundColor DarkGray
                     }
 
 
@@ -293,7 +304,7 @@ $totalSeconds = $scriptDuration.Seconds
 $totalMinutesLabel = if ($totalMinutes -eq 1) { "minute" } else { "minutes" }
 $totalSecondsLabel = if ($totalSeconds -eq 1) { "second" } else { "seconds" }
 
-Write-Host "All apps finished in $totalMinutes $totalMinutesLabel and $totalSeconds $totalSecondsLabel" -ForegroundColor Cyan
+Write-Host "`nAll apps finished in $totalMinutes $totalMinutesLabel and $totalSeconds $totalSecondsLabel" -ForegroundColor Cyan
 Write-Host "`n"
 Start-Sleep -Seconds 1
 
@@ -301,7 +312,7 @@ Start-Sleep -Seconds 1
 if ($appEnv) {
     Write-Host "`n"
     Write-FancyText "========================================" -ForegroundColor White
-    Write-FancyText "         GENERATING PREVIEW URLs    " -ForegroundColor Red
+    Write-FancyText "         GENERATING PREVIEW URLs        " -ForegroundColor Red
     Write-FancyText "========================================" -ForegroundColor White
     Write-Host "`n"
 
