@@ -148,9 +148,14 @@ foreach ($app in $apps) {
 
         Write-Host ""  # Add a new line after the spinner
 
-        Wait-AndCheckMsBuildProcess -Process $branchProcess -BuildName "Branch"
+        $branchSucceeded = Wait-AndCheckMsBuildProcess -Process $branchProcess -BuildName "Branch"
+
+        if ($branchSucceeded -eq $false) {
+            $failedApps += $app
+        }
+
     } else {
-        # If no appEnv, do the original Staging and Production builds
+        # If no appEnv, use Staging and Production builds
 
         ### Staging
         $msbuildStagingCommand = 'dotnet msbuild -p:DeployOnBuild=true -p:PublishProfile=Properties\PublishProfiles\Staging.pubxml'
@@ -320,7 +325,7 @@ if ($appEnv) {
 
     foreach ($app in $apps) {
         $appLower = $app.ToLower()
-        $url = "https://usfa-apps.clutch-inc.com/preview/$appLower/$appEnv/catalog/search"
+        $url = "https://usfa-apps.clutch-inc.com/preview/$appLower/$appEnv/"
 
         if ($app -eq "NFACourses") {
             $url = "https://usfa-apps.clutch-inc.com/preview/nfacourses/$appEnv/catalog/search"
