@@ -1,0 +1,39 @@
+# Preview branch builds (ApplicationAutomation.ps1)
+
+#### *Never do more than one thing at a time (ex: highlight multiple folders and delete all or add).*
+
+#### *Give the script time to process each event and cleanup (10 or so seconds will do).*
+
+
+## Need to know
+- Open WinSCP A1.
+- Navigate to the Apps directory.
+- Inside the Apps directory, enter the Previews directory.
+- Inside of Previews, you'll see a directory for each of the public apps.
+- Enter one of those and you will see directories with random numbers or nothing.
+- - If you see random directories inside, these are branch builds. You'll likely find an open ticket on GitHub Issues if you go to it via this url: https://github.com/clutch-inc/USFA-issues/issues/TICKET_NUMBER_HERE. Swap out TICKET_NUMBER_HERE with a value found on the directories inside the app.
+- - If you do NOT see any folders, this just means there are no open tickets for this app. *Note: these get cleared out weekly depending on the ticket milestone.*
+
+
+## Usage
+
+#### Add a branch build
+- Inside of the Preview/APP_NAME (NFACourses/Publications/etc.)
+- Copy & move the branch build directory over.
+- Wait about 10 seconds & the IIS site should be automatically created.
+
+
+#### Delete a branch build
+- Inside of the Preview/APP_NAME (NFACourses/Publications/etc.)
+- Delete the entire directory for the branch build (just the level of the branch build, so ex: Preview/APP_NAME/1400 <- delete 1400. NOT: Preview/App_NAME)
+- Wait about 10 seconds & the IIS site should automatically remove the site.
+
+#### Make a change to an already created branch build
+- Inside of the Preview/APP_NAME (NFACourses/Publications/etc.)
+- Navigate to the directory of the branch build.
+- Delete all files and folders inside there. (ApplicationAutomation script is watching from: Previews/App_Name/BRANCH_BUILD, so we shouldn't touch those unless we're deleting. Inside of BRANCH_BUILD, we are safe to delete and add files as need. IIS automation will not trigger here.)
+
+
+## Happening in the background
+
+Previews/APP_NAME (all public apps) is being constantly monitored 8am-8pm M-F for changes (additions/deletions of directories). When a directory is added, a new IIS App Pool is created first, and then immediately after that an IIS Web Application is created on the previews site previews web application at that APP_NAME. Little confusing, but essentially the script automates on IIS to: previews/previews/APP_NAME/BRANCH_BUILD.
