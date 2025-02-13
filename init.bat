@@ -20,6 +20,8 @@ doskey usfa-ui = cd c:\Users\clutch\Documents\Clutch\Apps\USFA-UI\USFA-UI
 doskey usfa-ui-admin = cd c:\Users\clutch\Documents\Clutch\Apps\USFA-UI-Admin
 doskey usfa-common = cd c:\Users\clutch\Documents\Clutch\Apps\USFA-Common-React
 doskey scripts = cd c:\Users\clutch\Documents\Clutch\ScriptCommands
+doskey sandbox-admin = cd c:\Users\clutch\Documents\Clutch\Apps\Sandbox-Admin
+doskey sandbox = cd c:\Users\clutch\Documents\Clutch\Apps\Sandbox
 
 doskey new-release= Powershell -ExecutionPolicy Bypass -Command "c:\Users\clutch\Documents\Clutch\ScriptCommands\new_release.ps1" $*
 doskey update-apps = PowerShell -ExecutionPolicy Bypass -Command "c:\Users\clutch\Documents\Clutch\ScriptCommands\update_apps.ps1" $*

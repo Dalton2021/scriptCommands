@@ -1,0 +1,90 @@
+# New_release
+
+**Must be used in the `Alias` command prompt. Will NOT work elsewhere.*
+
+## Usage
+
+##### All
+```
+new-release
+```
+
+##### All w/ zip
+```
+new-release -zip
+```
+
+##### All w/ branch
+```
+new-release -appEnv 1400
+```
+
+##### Specific
+```
+new-release -apps nfa thes
+```
+
+##### Specific w/ zip
+```
+new-release -apps nfa thes -zip
+```
+
+##### Specific w/ branch
+```
+new-release -apps nfa thes -appEnv 1400
+```
+
+
+
+
+## Flags
+
+### `-zip`
+
+Used to create a zip after the build.
+
+Type: `bool` (using -zip will declare this as `true`, otherwise defaults to `false` [no need to pass `-zip true`].)
+
+*Note: There will be a user input waiting for direction once you get to the **GENERATING ZIP FILES** portion of the script. An alert will ping your computer at this point, asking if you'd like to increase the version number of the ClientApp package.json. Always answer `y` if using this flag. A second input will fire asking for the version number. The current version number will be displayed as well, so use this to determine the next version number (use standard versioning standards). Accepted format: x.x.x (ints only).  This will be used in our zip file naming convention. Once finished, the zip file will head to the `Releases` folder of the app, and the oldest version found in this folder will be deleted.*
+
+**This will NOT work if the `-appEnv` flag is included in the command.**
+
+### `-apps`
+
+Used to decide which apps will be bundled using the `appMappings` variable.
+
+Type: `multiple strings seperated by spaces`.
+
+**When using this flag, use the key of the app found in appMappings.**
+
+```
+$appMappings = @{
+  "civ"    = "Civilian-Fatalities"
+  "contact" = "Contact"
+  "ff"      = "Firefighter-Fatalities"
+  "hotel"   = "Hotel"
+  "nfa"     = "NFACourses"
+  "pubs"    = "Publications"
+  "reg"     = "Registry"
+  "thes"    = "Thesaurus"
+}
+```
+
+
+### `-appEnv`
+
+Used to create a branch build.
+
+Type: `int`.
+
+*Note: The standard here is to pass the GitHub Issue ticket number in question. Ex: -appEnv 1400*
+
+*Note: Using this flag will trigger the **GENERATING PREVIEW URLs** portion of the script. This will generate a preview URL for each app passed along via the `-apps` flag or all of the apps (if `-apps` is not passed). The preview URL will be built using the value found in `-appEnv`. A table will populate with the URLs of said apps. `Press CRTL Click` to populate this in your browser.*
+
+*Note: To test a branch build, copy the branch build (will be titled the `-appEnv` value) folder to the Previews folder found in WinSCP A1 for the app in question. Ex: NFA Courses -> Preview/NFACourses/1400.*
+
+**Do not combine with `-zip`. Will NOT work.**
+
+
+
+
