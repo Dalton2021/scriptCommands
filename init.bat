@@ -30,3 +30,4 @@ doskey ff-admin = cd c:\Users\clutch\Documents\Clutch\Admin\Firefighter-Fataliti
 doskey new-release= Powershell -ExecutionPolicy Bypass -Command "c:\Users\clutch\Documents\Clutch\ScriptCommands\new_release.ps1" $*
 doskey update-apps = PowerShell -ExecutionPolicy Bypass -Command "c:\Users\clutch\Documents\Clutch\ScriptCommands\update_apps.ps1" $*
 doskey checkout-new = PowerShell -ExecutionPolicy Bypass -Command "c:\Users\clutch\Documents\Clutch\ScriptCommands\checkout-newBranch.ps1" $*
+doskey checkout-default = PowerShell -ExecutionPolicy Bypass -Command "c:\Users\clutch\Documents\Clutch\ScriptCommands\checkout-default.ps1" $*
