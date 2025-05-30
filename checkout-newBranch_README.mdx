@@ -1,0 +1,52 @@
+# Checkout-New
+
+**Must be used in the `Alias` command prompt. Will NOT work elsewhere.*
+
+## Usage
+
+##### Basic
+```
+checkout-new -branch BRANCH_VALUE_HERE
+```
+*-branch MUST BE USED ALWAYS
+
+##### Basic w/ special characters
+```
+checkout-new -branch '#BRANCH_VALUE_HERE_%_'
+```
+Special characters need wrapped in SINGLE quotations.
+
+
+##### All w/ apps
+```
+new-release -apps thes -branch BRANCH_VALUE_HERE
+```
+
+
+## Flags
+
+### `-branch`
+The value passed to open the new branch with. This is REQUIRED.
+
+Type: string
+
+### `-apps`
+
+Used to decide which apps will be bundled using the `appMappings` variable.
+
+Type: `multiple strings seperated by spaces`.
+
+**When using this flag, use the key of the app found in appMappings.**
+
+```
+$appMappings = @{
+  "civ"    = "Civilian-Fatalities"
+  "contact" = "Contact"
+  "ff"      = "Firefighter-Fatalities"
+  "hotel"   = "Hotel"
+  "nfa"     = "NFACourses"
+  "pubs"    = "Publications"
+  "reg"     = "Registry"
+  "thes"    = "Thesaurus"
+}
+```

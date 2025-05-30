@@ -202,3 +202,29 @@ function Get-YesOrNoInput {
         }
     }
 }
+
+
+#### These are for checkout-* scripts
+function Get-DefaultBranch {
+    param([string]$RepoPath)
+
+    try {
+        $remoteInfo = git -C $RepoPath remote show origin 2>$null
+        $defaultLine = $remoteInfo | Where-Object { $_ -match "HEAD branch" }
+
+        if (-not $defaultLine) {
+            throw "Could not detect default branch for $RepoPath."
+        }
+
+        return ($defaultLine -split ':')[-1].Trim()
+    } catch {
+        throw "Error detecting default branch in $RepoPath $_"
+    }
+}
+
+# Check for uncommitted changes
+function Has-UncommittedChanges {
+    param([string]$Path)
+    $status = git -C $Path status --porcelain
+    return -not [string]::IsNullOrWhiteSpace($status)
+}
