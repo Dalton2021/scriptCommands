@@ -90,7 +90,8 @@ if (-not $apps -or $apps.Count -eq 0) {
 }
 
 if (-not $branch) {
-    Write-Error "Please provide a branch name via the -branch parameter. `t" -NoNewline -ForegroundColor Yellow
+    Write-Error "Please provide a branch name via the -branch parameter."
+    exit 1
 }
 
 Write-Host "`n"
