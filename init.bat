@@ -27,6 +27,8 @@ doskey thes-admin = cd c:\Users\clutch\Documents\Clutch\Admin\Thesaurus-Admin
 doskey nfirs = cd c:\Users\clutch\Documents\Clutch\Admin\NFIRS-Admin
 doskey civ-admin = cd c:\Users\clutch\Documents\Clutch\Admin\Civilian-Fatalities-Admin
 doskey ff-admin = cd c:\Users\clutch\Documents\Clutch\Admin\Firefighter-Fatalities-Admin
+doskey registry-admin = cd c:\Users\clutch\Documents\Clutch\Admin\Registry-Admin
+
 doskey new-release= Powershell -ExecutionPolicy Bypass -Command "c:\Users\clutch\Documents\Clutch\ScriptCommands\new_release.ps1" $*
 doskey update-apps = PowerShell -ExecutionPolicy Bypass -Command "c:\Users\clutch\Documents\Clutch\ScriptCommands\update_apps.ps1" $*
 doskey checkout-new = PowerShell -ExecutionPolicy Bypass -Command "c:\Users\clutch\Documents\Clutch\ScriptCommands\checkout-newBranch.ps1" $*
