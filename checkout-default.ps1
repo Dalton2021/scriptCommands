@@ -45,7 +45,7 @@ $allApps = $appMappings.Values
 # If no apps are specified, use the full list
 if (-not $apps -or $apps.Count -eq 0) {
     Write-Host -NoNewline "~ No specific apps provided, using all apps. `t" -ForegroundColor Yellow
-    Show-LoadingSpinner -Duration 2 -Delay 150
+    Show-LoadingSpinner -Duration 1
     Write-Host ""  # Add a new line after the spinner
 
     $apps = $allApps
@@ -67,10 +67,9 @@ if (-not $apps -or $apps.Count -eq 0) {
     }
 
     Write-Host "~ Apps received: `t" -NoNewline -ForegroundColor Yellow
-    Show-LoadingSpinner -Duration 2 -Delay 150
+    Show-LoadingSpinner -Duration 1
 
     foreach ($app in $apps) {
-        Start-Sleep -Milliseconds 250
 
         if ($app -ne $apps[$apps.Count - 1] -and $apps.Count -ne 1) {
             # Print the app with a bar
@@ -84,7 +83,7 @@ if (-not $apps -or $apps.Count -eq 0) {
 
 Write-Host "`n"
 
-### Get default branch 
+### Get default branch
 # Iterate through resolved app repos
 foreach ($app in $apps) {
     $repoPath = Join-Path $baseAppPath $app
