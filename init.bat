@@ -2,6 +2,8 @@
 doskey ls = dir
 doskey rm = del
 
+doskey dev-www = cd c:\Users\clutch\Documents\Clutch\Apps\Legacy\dev-www.usfa.fema.gov
+doskey www = cd c:\Users\clutch\Documents\Clutch\Apps\Legacy\www.usfa.fema.gov
 doskey docs = cd c:\Users\clutch\Documents
 doskey clutch = cd c:\Users\clutch\Documents\Clutch
 doskey usfa = cd c:\Users\clutch\Documents\Clutch\USFA
